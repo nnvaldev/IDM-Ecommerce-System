@@ -48,3 +48,6 @@ coverage.xml
 
 # Alembic local
 backend/alembic/versions/__pycache__/
+
+docs
+scripts

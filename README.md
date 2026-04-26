@@ -27,27 +27,37 @@ idm-ecommerce/
 
 ## Quickstart
 
+Solo necesitas **Docker** y **Make** instalados.
+
 ```bash
-# 1. Levantar PostgreSQL
-docker compose up -d db
+git clone <url-del-repo>
+cd idm-ecommerce
 
-# 2. Instalar dependencias del backend
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+make build    # construye imágenes y levanta los contenedores
+make migrate  # corre las migraciones de base de datos
+make seed     # carga datos de prueba
+```
 
-# 3. Copiar variables de entorno
-cp .env.example .env
+O todo de un solo comando:
 
-# 4. Ejecutar migraciones
-alembic upgrade head
-
-# 5. Levantar API
-uvicorn app.main:app --reload
+```bash
+make reset
 ```
 
 API: <http://localhost:8000> · Docs: <http://localhost:8000/docs>
+
+## Comandos disponibles
+
+| Comando | Descripción |
+|---|---|
+| `make build` | Construye las imágenes y levanta los contenedores |
+| `make up` | Levanta los contenedores sin reconstruir |
+| `make down` | Para los contenedores |
+| `make logs` | Muestra los logs del backend en tiempo real |
+| `make shell` | Abre una terminal dentro del contenedor |
+| `make migrate` | Ejecuta las migraciones de Alembic |
+| `make seed` | Carga los datos de prueba |
+| `make reset` | Reinicia todo desde cero (borra la DB y vuelve a levantar) |
 
 ## Metodología
 
