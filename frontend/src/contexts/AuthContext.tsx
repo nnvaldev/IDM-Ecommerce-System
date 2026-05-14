@@ -1,12 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { api } from "@/lib/api";
-
-export type UserRole =
-  | "ADMIN"
-  | "WAREHOUSE_MANAGER"
-  | "SALES"
-  | "CLIENT_B2B"
-  | "CLIENT_B2C";
+import type { UserRole } from "@/lib/types";
 
 export interface AuthUser {
   id: number;
@@ -20,25 +20,40 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  registerB2C: (payload: {
+    email: string;
+    password: string;
+    full_name: string;
+    phone?: string;
+    city?: string;
+    tax_id?: string;
+  }) => Promise<void>;
   logout: () => void;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const TOKEN_KEY = "idm_token";
+
+async function fetchMe() {
+  const r = await api.get<AuthUser>("/auth/me");
+  return r.data;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("idm_token");
+    const token = localStorage.getItem(TOKEN_KEY);
     if (!token) {
       setLoading(false);
       return;
     }
-    api
-      .get<AuthUser>("/auth/me")
-      .then((r) => setUser(r.data))
-      .catch(() => localStorage.removeItem("idm_token"))
+    fetchMe()
+      .then(setUser)
+      .catch(() => localStorage.removeItem(TOKEN_KEY))
       .finally(() => setLoading(false));
   }, []);
 
@@ -46,25 +61,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const form = new URLSearchParams();
     form.append("username", email);
     form.append("password", password);
-
     const { data } = await api.post<{ access_token: string }>(
       "/auth/login",
       form,
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
-    localStorage.setItem("idm_token", data.access_token);
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    setUser(await fetchMe());
+  };
 
-    const me = await api.get<AuthUser>("/auth/me");
-    setUser(me.data);
+  const registerB2C: AuthContextValue["registerB2C"] = async (payload) => {
+    const { data } = await api.post<{ access_token: string }>(
+      "/auth/register",
+      payload
+    );
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    setUser(await fetchMe());
   };
 
   const logout = () => {
-    localStorage.removeItem("idm_token");
+    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   };
 
+  const refresh = async () => {
+    setUser(await fetchMe());
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, registerB2C, logout, refresh }}
+    >
       {children}
     </AuthContext.Provider>
   );

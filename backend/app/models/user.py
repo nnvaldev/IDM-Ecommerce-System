@@ -9,12 +9,14 @@ from app.models._mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
+    from app.models.seller import Seller
 
 
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     WAREHOUSE_MANAGER = "WAREHOUSE_MANAGER"
     SALES = "SALES"
+    SELLER = "SELLER"
     CLIENT_B2B = "CLIENT_B2B"
     CLIENT_B2C = "CLIENT_B2C"
 
@@ -34,3 +36,8 @@ class User(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     customer: Mapped["Customer | None"] = relationship(back_populates="user", uselist=False)
+    seller: Mapped["Seller | None"] = relationship(
+        back_populates="owner",
+        uselist=False,
+        foreign_keys="Seller.owner_user_id",
+    )

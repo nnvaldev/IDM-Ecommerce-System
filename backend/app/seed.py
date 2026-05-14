@@ -6,9 +6,12 @@ Uso:
 Crea (idempotente):
 - Admin: admin@idm.bo / admin123
 - Cliente B2B demo: taller@demo.bo / demo1234
-- Almacenes: LP-01 (La Paz), CBB-01 (Cochabamba), SCZ-01 (Santa Cruz)
+- 3 sellers: IDM S.A. (raíz, APPROVED), Lubricantes Bolivia (APPROVED),
+  Repuestos Andinos (APPROVED). Cuentas demo: seller1@demo.bo / seller2@demo.bo
+- Almacenes IDM: LP-01 (La Paz), CBB-01 (Cochabamba), SCZ-01 (Santa Cruz)
+- 1 almacén por seller adicional
 - Categorías base por tipo
-- Un producto por tipo, con stock inicial en los 3 almacenes
+- Un producto por tipo (IDM) + productos extras de cada seller, con stock inicial
 """
 import asyncio
 from decimal import Decimal
@@ -25,6 +28,8 @@ from app.models import (
     Product,
     ProductCategory,
     ProductType,
+    Seller,
+    SellerStatus,
     User,
     UserRole,
     Warehouse,
@@ -98,7 +103,87 @@ async def run() -> None:
                 )
             )
 
-        # --- Almacenes ---
+        # --- Seller raíz IDM ---
+        idm_seller = (
+            await db.execute(select(Seller).where(Seller.is_house.is_(True)))
+        ).scalar_one_or_none()
+        if idm_seller is None:
+            idm_seller = Seller(
+                id=1,
+                name="IDM S.A.",
+                slug="idm",
+                nit="1023456789",
+                contact_email="admin@idm.bo",
+                phone="+591 22000000",
+                address="Av. 6 de Agosto 2500, La Paz",
+                city="La Paz",
+                description=(
+                    "Importadora y Distribuidora Multimotriz S.A. — repuestos, "
+                    "lubricantes y vehículos."
+                ),
+                status=SellerStatus.APPROVED,
+                is_house=True,
+                owner_user_id=admin.id,
+            )
+            db.add(idm_seller)
+            await db.flush()
+        else:
+            # Asegurar dueño y estado correctos
+            idm_seller.status = SellerStatus.APPROVED
+            if idm_seller.owner_user_id is None:
+                idm_seller.owner_user_id = admin.id
+
+        # --- Seller 1: Lubricantes Bolivia ---
+        seller1_user, _ = await _get_or_create_user(
+            db,
+            "seller1@demo.bo",
+            password_hash=hash_password("seller123"),
+            full_name="Lubricantes Bolivia SRL",
+            role=UserRole.SELLER,
+            is_active=True,
+        )
+        seller1, _ = await _get_or_create(
+            db,
+            Seller,
+            {"slug": "lubricantes-bolivia"},
+            {
+                "name": "Lubricantes Bolivia SRL",
+                "nit": "2034567890",
+                "contact_email": "ventas@lubribolivia.bo",
+                "phone": "+591 22111222",
+                "city": "Cochabamba",
+                "description": "Especialistas en lubricantes y aditivos para motor.",
+                "status": SellerStatus.APPROVED,
+                "owner_user_id": seller1_user.id,
+            },
+        )
+
+        # --- Seller 2: Repuestos Andinos ---
+        seller2_user, _ = await _get_or_create_user(
+            db,
+            "seller2@demo.bo",
+            password_hash=hash_password("seller123"),
+            full_name="Repuestos Andinos S.A.",
+            role=UserRole.SELLER,
+            is_active=True,
+        )
+        seller2, _ = await _get_or_create(
+            db,
+            Seller,
+            {"slug": "repuestos-andinos"},
+            {
+                "name": "Repuestos Andinos S.A.",
+                "nit": "2045678901",
+                "contact_email": "ventas@andinos.bo",
+                "phone": "+591 33444555",
+                "city": "Santa Cruz",
+                "description": "Repuestos automotrices originales y alternativos.",
+                "status": SellerStatus.APPROVED,
+                "owner_user_id": seller2_user.id,
+            },
+        )
+
+        # --- Almacenes IDM ---
         warehouses: dict[str, Warehouse] = {}
         for code, name, city in [
             ("LP-01", "Almacén La Paz", "LA_PAZ"),
@@ -106,9 +191,37 @@ async def run() -> None:
             ("SCZ-01", "Almacén Santa Cruz", "SANTA_CRUZ"),
         ]:
             wh, _ = await _get_or_create(
-                db, Warehouse, {"code": code}, {"name": name, "city": city}
+                db,
+                Warehouse,
+                {"code": code},
+                {"name": name, "city": city, "seller_id": idm_seller.id},
             )
+            # Garantizar que existentes queden bajo IDM
+            if wh.seller_id != idm_seller.id:
+                wh.seller_id = idm_seller.id
             warehouses[code] = wh
+
+        # Almacén único por seller adicional
+        wh_seller1, _ = await _get_or_create(
+            db,
+            Warehouse,
+            {"code": "LUB-CBB"},
+            {
+                "name": "Bodega Lubricantes Cochabamba",
+                "city": "COCHABAMBA",
+                "seller_id": seller1.id,
+            },
+        )
+        wh_seller2, _ = await _get_or_create(
+            db,
+            Warehouse,
+            {"code": "AND-SCZ"},
+            {
+                "name": "Centro Logístico Andinos Santa Cruz",
+                "city": "SANTA_CRUZ",
+                "seller_id": seller2.id,
+            },
+        )
 
         # --- Categorías ---
         cat_rep, _ = await _get_or_create(
@@ -130,12 +243,13 @@ async def run() -> None:
             {"product_type": ProductType.VEHICULO},
         )
 
-        # --- Productos demo ---
+        # --- Productos IDM (demo) ---
         prod_rep, _ = await _get_or_create(
             db,
             Product,
             {"sku": "REP-0001"},
             {
+                "seller_id": idm_seller.id,
                 "name": "Filtro de aceite Toyota Hilux",
                 "description": "Filtro OEM para motor 2.8 diésel",
                 "product_type": ProductType.REPUESTO,
@@ -153,6 +267,7 @@ async def run() -> None:
             Product,
             {"sku": "LUB-0001"},
             {
+                "seller_id": idm_seller.id,
                 "name": "Aceite Mobil 1 5W-30 4L",
                 "description": "Aceite sintético de alto desempeño",
                 "product_type": ProductType.LUBRICANTE,
@@ -171,6 +286,7 @@ async def run() -> None:
             Product,
             {"sku": "VEH-0001"},
             {
+                "seller_id": idm_seller.id,
                 "name": "Toyota Hilux 2026 DX 2.4L 4x4",
                 "description": "Camioneta 0 KM",
                 "product_type": ProductType.VEHICULO,
@@ -188,8 +304,69 @@ async def run() -> None:
             },
         )
 
+        # --- Productos extras de seller1 (Lubricantes Bolivia) ---
+        prod_s1_a, _ = await _get_or_create(
+            db,
+            Product,
+            {"sku": "LUB-1001"},
+            {
+                "seller_id": seller1.id,
+                "name": "Aceite Castrol GTX 20W-50 4L",
+                "description": "Aceite mineral protección máxima",
+                "product_type": ProductType.LUBRICANTE,
+                "category_id": cat_lub.id,
+                "base_price": Decimal("180.00"),
+                "attributes": {"viscosidad": "20W-50", "volumen_ml": 4000, "sae": "20W-50"},
+            },
+        )
+        prod_s1_b, _ = await _get_or_create(
+            db,
+            Product,
+            {"sku": "LUB-1002"},
+            {
+                "seller_id": seller1.id,
+                "name": "Refrigerante Prestone 1 GL",
+                "description": "Refrigerante listo para usar",
+                "product_type": ProductType.LUBRICANTE,
+                "category_id": cat_lub.id,
+                "base_price": Decimal("95.00"),
+                "attributes": {"volumen_ml": 3785, "tipo_motor": "universal"},
+            },
+        )
+
+        # --- Productos extras de seller2 (Repuestos Andinos) ---
+        prod_s2_a, _ = await _get_or_create(
+            db,
+            Product,
+            {"sku": "REP-2001"},
+            {
+                "seller_id": seller2.id,
+                "name": "Pastillas de freno Nissan Sentra",
+                "description": "Juego delantero cerámica de baja emisión",
+                "product_type": ProductType.REPUESTO,
+                "category_id": cat_rep.id,
+                "base_price": Decimal("220.00"),
+                "attributes": {"marca": "Nissan", "numero_parte": "D1060-EM00A"},
+            },
+        )
+        prod_s2_b, _ = await _get_or_create(
+            db,
+            Product,
+            {"sku": "REP-2002"},
+            {
+                "seller_id": seller2.id,
+                "name": "Batería Bosch 12V 70Ah",
+                "description": "Batería libre de mantenimiento",
+                "product_type": ProductType.REPUESTO,
+                "category_id": cat_rep.id,
+                "base_price": Decimal("680.00"),
+                "attributes": {"marca": "Bosch", "voltios": 12, "amperios_hora": 70},
+            },
+        )
+
         # --- Stock inicial ---
         stock_plan = [
+            # Productos IDM en sus 3 almacenes
             (prod_rep, warehouses["LP-01"], 50),
             (prod_rep, warehouses["CBB-01"], 30),
             (prod_rep, warehouses["SCZ-01"], 40),
@@ -198,6 +375,12 @@ async def run() -> None:
             (prod_lub, warehouses["SCZ-01"], 120),
             (prod_veh, warehouses["LP-01"], 2),
             (prod_veh, warehouses["SCZ-01"], 3),
+            # Seller 1
+            (prod_s1_a, wh_seller1, 60),
+            (prod_s1_b, wh_seller1, 45),
+            # Seller 2
+            (prod_s2_a, wh_seller2, 30),
+            (prod_s2_b, wh_seller2, 15),
         ]
         for product, wh, qty in stock_plan:
             await _get_or_create(
@@ -209,8 +392,10 @@ async def run() -> None:
 
         await db.commit()
         print("Seed completado.")
-        print("  Admin: admin@idm.bo / admin123")
-        print("  B2B:   taller@demo.bo / demo1234")
+        print("  Admin:       admin@idm.bo     / admin123")
+        print("  B2B:         taller@demo.bo   / demo1234")
+        print("  Seller 1:    seller1@demo.bo  / seller123  (Lubricantes Bolivia)")
+        print("  Seller 2:    seller2@demo.bo  / seller123  (Repuestos Andinos)")
 
 
 if __name__ == "__main__":

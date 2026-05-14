@@ -11,6 +11,7 @@ from app.models._mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.inventory import Inventory
+    from app.models.seller import Seller
 
 
 class ProductType(str, enum.Enum):
@@ -46,6 +47,9 @@ class Product(Base, TimestampMixin):
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    seller_id: Mapped[int] = mapped_column(
+        ForeignKey("sellers.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
     sku: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
@@ -68,3 +72,4 @@ class Product(Base, TimestampMixin):
 
     category: Mapped[ProductCategory | None] = relationship(back_populates="products")
     inventory: Mapped[list["Inventory"]] = relationship(back_populates="product")
+    seller: Mapped["Seller"] = relationship()

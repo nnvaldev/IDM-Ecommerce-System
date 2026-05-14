@@ -1,80 +1,110 @@
 import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
   const [email, setEmail] = useState("admin@idm.bo");
   const [password, setPassword] = useState("admin123");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     setSubmitting(true);
     try {
       await login(email, password);
       navigate("/", { replace: true });
     } catch {
-      setError("Credenciales inválidas o servicio no disponible.");
+      toast.error("Credenciales inválidas o servicio no disponible");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-ink-100 px-4 py-12">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm ring-1 ring-slate-200"
+        className="w-full max-w-md rounded-2xl bg-white p-8 shadow-card ring-1 ring-ink-200"
       >
-        <h1 className="text-xl font-semibold text-slate-900">IDM E-Commerce</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Ingresá con tu cuenta para continuar.
-        </p>
+        <div className="mb-6">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white">
+            IDM
+          </div>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-ink-900">
+            IDM E-Commerce
+          </h1>
+          <p className="mt-1 text-sm text-ink-500">
+            Sistema de Administración y Control multidiversificador.
+          </p>
+        </div>
 
-        <div className="mt-6 space-y-4">
+        <div className="space-y-3">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Email</span>
+            <span className="label">Email</span>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="input mt-1"
+              autoComplete="email"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Contraseña</span>
+            <span className="label">Contraseña</span>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="input mt-1"
+              autoComplete="current-password"
             />
           </label>
-
-          {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            {submitting ? "Ingresando…" : "Ingresar"}
-          </button>
         </div>
 
-        <p className="mt-6 text-xs text-slate-400">
-          Demo: admin@idm.bo / admin123
-        </p>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="btn-primary mt-6 w-full"
+        >
+          {submitting ? "Ingresando…" : "Ingresar"}
+        </button>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 rounded-lg bg-ink-50 p-3 text-xs text-ink-600">
+          <div>
+            <div className="font-semibold text-ink-700">Demo Admin</div>
+            <div className="font-mono">admin@idm.bo</div>
+            <div className="font-mono">admin123</div>
+          </div>
+          <div>
+            <div className="font-semibold text-ink-700">Demo B2B</div>
+            <div className="font-mono">taller@demo.bo</div>
+            <div className="font-mono">demo1234</div>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-1 text-center text-sm text-ink-500">
+          <p>
+            ¿Sos cliente nuevo?{" "}
+            <Link to="/register" className="font-medium text-brand-600 hover:underline">
+              Crear cuenta minorista
+            </Link>
+          </p>
+          <p>
+            ¿Tenés una empresa y querés vender en la plataforma?{" "}
+            <Link
+              to="/registro-empresa"
+              className="font-medium text-emerald-700 hover:underline"
+            >
+              Registrar empresa
+            </Link>
+          </p>
+        </div>
       </form>
     </div>
   );

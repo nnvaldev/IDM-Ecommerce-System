@@ -18,10 +18,12 @@ if TYPE_CHECKING:
 
 class OrderStatus(str, enum.Enum):
     DRAFT = "DRAFT"
+    PENDING_APPROVAL = "PENDING_APPROVAL"  # B2B en espera del Ejecutivo de Ventas
     CONFIRMED = "CONFIRMED"
     PAID = "PAID"
     SHIPPED = "SHIPPED"
     DELIVERED = "DELIVERED"
+    REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
 
 
@@ -44,6 +46,9 @@ class Order(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     order_number: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    seller_id: Mapped[int] = mapped_column(
+        ForeignKey("sellers.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
     customer_id: Mapped[int] = mapped_column(
         ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True
     )
