@@ -129,7 +129,7 @@ export default function POS() {
   };
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="POS Mostrador"
         description="Venta presencial en sucursal: busca por SKU, cobra y factura SIAT al instante."
@@ -364,7 +364,7 @@ export default function POS() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
 
