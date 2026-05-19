@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/contexts/ToastContext";

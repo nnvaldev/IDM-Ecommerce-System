@@ -33,7 +33,7 @@ export default function Inventory() {
     const productsEndpoint = isSeller ? "/catalog/my/products" : "/catalog/products";
     const [wh, prods, alertsRes] = await Promise.all([
       api.get<Warehouse[]>("/warehouses"),
-      api.get<ProductListItem[]>(productsEndpoint, { params: { limit: 500 } }),
+      api.get<ProductListItem[]>(productsEndpoint, { params: { limit: 200 } }),
       api.get<StockAlert[]>("/inventory/alerts"),
     ]);
     setWarehouses(wh.data);
