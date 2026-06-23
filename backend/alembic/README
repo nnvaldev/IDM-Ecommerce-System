@@ -1,0 +1,14 @@
+Migraciones con Alembic (async).
+
+Comandos útiles:
+
+  # Generar migración automática desde los modelos
+  alembic revision --autogenerate -m "mensaje"
+
+  # Aplicar migraciones
+  alembic upgrade head
+
+  # Revertir la última
+  alembic downgrade -1
+
+Requiere DATABASE_URL configurada (vía .env o variable de entorno).
