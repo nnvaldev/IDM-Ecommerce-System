@@ -7,7 +7,6 @@ import type {
   ProductType,
 } from "@/lib/types";
 import { formatBOB } from "@/lib/format";
-import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { FullPageSpinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
@@ -81,7 +80,7 @@ export default function SellerProducts() {
   if (loading) return <FullPageSpinner label="Cargando mis productos…" />;
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Mis productos"
         description="Catálogo que tu empresa ofrece en la plataforma. Solo ves tus propios productos."
@@ -214,7 +213,7 @@ export default function SellerProducts() {
           </table>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { Spinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
@@ -39,7 +38,7 @@ export default function SellerOrders() {
   }, [filter]);
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Ventas de mi empresa"
         description="Historial de órdenes que clientes hicieron de mis productos."
@@ -114,6 +113,6 @@ export default function SellerOrders() {
           </table>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

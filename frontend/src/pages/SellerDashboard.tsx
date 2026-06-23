@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { Spinner } from "@/components/Spinner";
 import { KpiCard } from "@/components/KpiCard";
@@ -41,26 +40,22 @@ export default function SellerDashboard() {
   }, []);
 
   if (loading) {
-    return (
-      <Layout>
-        <Spinner />
-      </Layout>
-    );
+    return <Spinner />;
   }
 
   if (!seller) {
     return (
-      <Layout>
+      <>
         <PageHeader title="Mi empresa" />
         <p className="text-sm text-ink-600">
           No tenés una empresa asociada a este usuario.
         </p>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title={seller.name}
         description={`NIT ${seller.nit} · ${seller.city ?? "Sin ciudad"}`}
@@ -178,6 +173,6 @@ export default function SellerDashboard() {
           </ul>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }

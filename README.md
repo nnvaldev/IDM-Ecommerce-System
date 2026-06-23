@@ -15,7 +15,7 @@ Cualquier empresa puede solicitar registro como **vendedor** (`/registro-empresa
 **Backend** Python 3.12 · FastAPI 0.115 · SQLAlchemy 2.0 async · asyncpg · Alembic · Pydantic v2 · python-jose (JWT) · passlib + bcrypt 4.1.3 · fpdf2 (PDF SIAT)
 **Base de datos** PostgreSQL 16
 **Frontend** React 18 · Vite 5 · TypeScript estricto · Tailwind 3 · React Router 6 · axios · Recharts · qrcode.react · @yudiel/react-qr-scanner
-**Infra** Docker Compose · Makefile
+**Infra** Docker Compose · Makefile (atajo opcional; en Windows se corre con `docker compose` directo — ver [Windows sin make](#windows-powershell--sin-make))
 
 ## Estructura
 
@@ -69,13 +69,34 @@ Datos seed adicionales:
 
 ## Quickstart
 
-Requisitos: **Docker** + **Make** + **Node 20** (para el frontend).
+Requisitos: **Docker Desktop** + **Node 20** (para el frontend). `make` es opcional y solo está en Linux/macOS/WSL.
+
+El backend y Postgres corren **enteros en Docker** — no necesitás instalar Python ni Postgres en tu máquina.
+
+**Linux / macOS / WSL (con make):**
 
 ```bash
 git clone <url>
 cd idm-ecommerce
 
 make reset       # build + migrate + seed (todo en uno desde cero)
+
+cd frontend
+npm install
+npm run dev      # Vite en :5173 con proxy /api → :8000
+```
+
+**Windows (PowerShell, sin make):**
+
+```powershell
+git clone <url>
+cd idm-ecommerce
+
+# Equivalente a `make reset` (build + migrate + seed desde cero)
+docker compose down -v
+docker compose up --build -d
+docker compose exec backend alembic upgrade head
+docker compose exec backend python app/seed.py
 
 cd frontend
 npm install
@@ -94,11 +115,13 @@ Guía paso a paso para alguien que clona el repo por primera vez.
 
 ### 1. Requisitos previos
 
-- **Docker** + **Docker Compose** (Docker Desktop ya los incluye)
-- **Make** (`sudo apt install make` en Ubuntu; en Windows usar WSL)
-- **Node 20+** y **npm**
+- **Docker** + **Docker Compose** (Docker Desktop ya los incluye, en Windows, macOS y Linux)
+- **Node 20+** y **npm** (solo para el frontend)
+- **Make** — **opcional**, solo en Linux/macOS/WSL. En Windows no hace falta: se usan los comandos `docker compose` directos (ver [Windows sin make](#windows-powershell--sin-make)).
 
-### 2. Clonar y levantar todo
+> El backend y la base de datos corren dentro de contenedores Docker, así que **no necesitás Python ni PostgreSQL instalados** en el host.
+
+### 2. Clonar y levantar todo (Linux / macOS / WSL)
 
 ```bash
 git clone <url-del-repo>
@@ -113,6 +136,8 @@ npm install
 npm run dev
 ```
 
+> ¿En Windows? Saltá a [Windows (PowerShell, sin make)](#windows-powershell--sin-make).
+
 Eso deja corriendo:
 
 | Servicio  | URL                          |
@@ -120,6 +145,47 @@ Eso deja corriendo:
 | API       | http://localhost:8000        |
 | Swagger   | http://localhost:8000/docs   |
 | Frontend  | http://localhost:5173        |
+
+### Windows (PowerShell · sin make)
+
+En Windows no hay `make`, pero **no hace falta**: `make` es solo un atajo de comandos `docker compose`. Con **Docker Desktop** corriendo y una terminal **PowerShell** abierta en la raíz del repo, ejecutá lo mismo a mano.
+
+**Primera vez (desde cero — equivale a `make reset`):**
+
+```powershell
+git clone <url-del-repo>
+cd idm-ecommerce
+
+docker compose down -v                                  # borra datos previos
+docker compose up --build -d                            # build + levantar db + backend
+docker compose exec backend alembic upgrade head        # migraciones
+docker compose exec backend python app/seed.py          # datos demo
+```
+
+**Frontend (en otra ventana de PowerShell):**
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+**Equivalencias `make` → `docker compose` (PowerShell):**
+
+| `make`         | Comando manual en Windows                                                                 |
+|----------------|-------------------------------------------------------------------------------------------|
+| `make up`      | `docker compose up -d`                                                                     |
+| `make build`   | `docker compose up --build -d`                                                             |
+| `make down`    | `docker compose down`                                                                      |
+| `make logs`    | `docker compose logs -f backend`                                                           |
+| `make shell`   | `docker compose exec backend bash`                                                         |
+| `make migrate` | `docker compose exec backend alembic upgrade head`                                         |
+| `make seed`    | `docker compose exec backend python app/seed.py`                                           |
+| `make reset`   | `docker compose down -v; docker compose up --build -d; docker compose exec backend alembic upgrade head; docker compose exec backend python app/seed.py` |
+
+> En PowerShell los comandos se encadenan con `;` (no con `&&`). Si preferís que cada paso se detenga ante un error, corré las líneas de a una.
+
+Para frenar el frontend: `Ctrl+C` en la ventana del `npm run dev`.
 
 ### 3. Qué hace `make reset`
 
@@ -143,13 +209,16 @@ make seed      # re-correr seed (idempotente)
 make shell     # bash dentro del container backend
 ```
 
-Para frenar el frontend: `Ctrl+C` en la terminal del `npm run dev` (o `pkill -f vite`).
+> En **Windows** (sin make) usá los `docker compose` equivalentes de la tabla en [Windows (PowerShell · sin make)](#windows-powershell--sin-make).
+
+Para frenar el frontend: `Ctrl+C` en la terminal del `npm run dev` (en Linux/macOS también `pkill -f vite`).
 
 ### 6. Troubleshooting
 
-- **Puerto 5432, 8000 o 5173 ocupado** → matar el proceso que los usa o cambiar el mapping en `docker-compose.yml` / `vite.config.ts`.
-- **`make: command not found`** → instalar make (`sudo apt install make`) o correr los comandos a mano (`docker compose up --build -d`, `docker compose exec backend alembic upgrade head`, `docker compose exec backend python app/seed.py`).
-- **El frontend carga pero no se loguea** → verificar que el backend esté arriba (`make logs`) y que el proxy de Vite apunte a `http://localhost:8000` (ya viene configurado en `vite.config.ts`).
+- **Puerto 5433, 8000 o 5173 ocupado** → matar el proceso que los usa o cambiar el mapping en `docker-compose.yml` / `vite.config.ts`. (Postgres se expone en el host en **5433** → `5432` dentro del contenedor.)
+- **`make: command not found`** (típico en Windows) → no instales nada: usá los comandos `docker compose` directos de la sección [Windows (PowerShell · sin make)](#windows-powershell--sin-make). En Linux/macOS, si querés el atajo: `sudo apt install make`.
+- **`docker compose` no encontrado / "Cannot connect to the Docker daemon"** → abrí **Docker Desktop** y esperá a que diga *Running* antes de correr los comandos.
+- **El frontend carga pero no se loguea** → verificar que el backend esté arriba (`docker compose logs -f backend`) y que el proxy de Vite apunte a `http://localhost:8000` (ya viene configurado en `vite.config.ts`).
 - **Quiero empezar limpio otra vez** → `make reset` borra el volumen y rehace todo.
 
 ### Comandos Make

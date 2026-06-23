@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { Spinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
@@ -82,7 +81,7 @@ export default function AdminSellers() {
   };
 
   return (
-    <Layout>
+    <>
       <PageHeader
         title="Empresas vendedoras"
         description="Aprueba o rechaza las empresas que solicitan vender en la plataforma."
@@ -216,6 +215,6 @@ export default function AdminSellers() {
           </table>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
