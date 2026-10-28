@@ -19,10 +19,10 @@ migrate:
 	docker compose exec backend alembic upgrade head
 
 seed:
-	docker compose exec backend python app/seed.py
+	docker compose exec backend python -m app.seed
 
 reset:
 	docker compose down -v
 	docker compose up --build -d
 	docker compose exec backend alembic upgrade head
-	docker compose exec backend python app/seed.py
+	docker compose exec backend python -m app.seed
