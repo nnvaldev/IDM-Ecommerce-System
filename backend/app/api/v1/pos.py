@@ -180,11 +180,11 @@ async def pos_checkout(
                 reference_id=order.id,
             )
         except InsufficientStock as e:
+            # El rollback expira los objetos de la sesión: leerlos después
+            # dispararía una carga perezosa fuera del contexto async (500).
+            detail = f"Stock insuficiente en {warehouse.code} para SKU {product.sku}"
             await db.rollback()
-            raise HTTPException(
-                status_code=409,
-                detail=f"Stock insuficiente en {warehouse.code} para SKU {product.sku}",
-            ) from e
+            raise HTTPException(status_code=409, detail=detail) from e
         except InventoryError as e:
             await db.rollback()
             raise HTTPException(status_code=400, detail=str(e)) from e
